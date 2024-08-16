@@ -34,6 +34,12 @@ pydantic = "^2.7.2"
 python-dotenv = "^1.0.0"
 requests = "*"
 sentry-sdk = "^1.40.4"
+transformers = "^4.31.0"
+huggingface_hub = "^0.17.2"
+google-cloud-logging = "3.11.1"
+grpcio = "1.49.1"
+proto-plus = "1.22.2"
+protobuf = "<=3.20.3"
 
 # Benchmarking
 agbenchmark = { path = "../benchmark", optional = true }

@@ -42,6 +42,11 @@ class AppConfig(BaseConfig):
     component_config_file: Optional[Path] = UserConfigurable(
         default=None, from_env="COMPONENT_CONFIG_FILE"
     )
+    materials_project_api_key: Optional[SecretStr] = UserConfigurable(
+        default = None,
+        from_env = "MATERIALS_PROJECT_API_KEY",
+        description = "API key for Materials Project"
+    )
 
     ##########################
     # Agent Control Settings #
@@ -136,6 +141,9 @@ async def assert_config_has_required_llm_api_keys(config: AppConfig) -> None:
     from forge.llm.providers.groq import GroqModelName
     from pydantic import ValidationError
 
+    if config.materials_project_api_key is None:
+        raise ValueError("Materials Project API key is not set")
+
     if set((config.smart_llm, config.fast_llm)).intersection(AnthropicModelName):
         from forge.llm.providers.anthropic import AnthropicCredentials
 
@@ -212,6 +220,13 @@ async def assert_config_has_required_llm_api_keys(config: AppConfig) -> None:
                 "https://docs.agpt.co/autogpt/setup/#openai"
             )
             raise ValueError("OpenAI is unavailable: invalid API key") from e
+    
+    if config.materials_project_api_key is None:
+        logger.error("Set your Materials Project API key in .env or as an environment variable")
+        logger.info(
+            "For further instructions: https://materialsproject.org/open"
+        )
+        raise ValueError("Materials Project API key is not set")
 
 
 def _safe_split(s: Union[str, None], sep: str = ",") -> list[str]:

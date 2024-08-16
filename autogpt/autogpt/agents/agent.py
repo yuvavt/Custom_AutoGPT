@@ -271,7 +271,11 @@ class Agent(BaseAgent[OneShotAgentActionProposal], Configurable[AgentSettings]):
         Returns:
             str: The execution result
         """
-        # Execute a native command with the same name or alias, if it exists
+        if tool_call.name == "query_material":
+            from autogpt.app.materials_project_api import process_material_query
+            return process_material_query(tool_call.arguments["query"], self.app_config.MATERIALS_PROJECT_API_KEY)
+
+        # Execute a native command with the same name or alias, if it exists        
         command = self._get_command(tool_call.name)
         try:
             result = command(**tool_call.arguments)

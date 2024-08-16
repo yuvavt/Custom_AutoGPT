@@ -4,13 +4,9 @@ ARG BUILD_TYPE=dev
 # Use an official Python base image from the Docker Hub
 FROM python:3.10-slim AS autogpt-base
 
-# Install browsers
+# Install required packages and utilities
 RUN apt-get update && apt-get install -y \
     chromium-driver ca-certificates gcc \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install utilities
-RUN apt-get update && apt-get install -y \
     curl jq wget git \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -26,20 +22,15 @@ ENV PIP_NO_CACHE_DIR=yes \
 # Install and configure Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 -
 ENV PATH="$POETRY_HOME/bin:$PATH"
+RUN poetry --version
 RUN poetry config installer.max-workers 10
 
 WORKDIR /app/autogpt
 COPY autogpt/pyproject.toml autogpt/poetry.lock ./
 
-# Include forge so it can be used as a path dependency
+# Include forge and frontend directories
 COPY forge/ ../forge
-
-# Include frontend
 COPY frontend/ ../frontend
-
-# Set the entrypoint
-ENTRYPOINT ["poetry", "run", "autogpt"]
-CMD []
 
 # dev build -> include everything
 FROM autogpt-base as autogpt-dev
@@ -57,5 +48,10 @@ ONBUILD COPY autogpt/plugins/ ./plugins
 ONBUILD COPY autogpt/README.md ./README.md
 ONBUILD RUN mkdir ./data
 
+# Final build stage based on BUILD_TYPE
 FROM autogpt-${BUILD_TYPE} AS autogpt
 RUN poetry install --only-root
+
+# Set the entrypoint
+ENTRYPOINT ["poetry", "run", "autogpt"]
+CMD []

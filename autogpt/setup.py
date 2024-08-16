@@ -64,7 +64,7 @@ setup(
     ],
     options={
         "build_exe": {
-            "packages": packages,
+            "packages": packages + ["requests", "spacy"],
             "includes": [
                 "autogpt",
                 "spacy",

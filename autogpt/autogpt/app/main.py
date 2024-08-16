@@ -13,6 +13,8 @@ from pathlib import Path
 from types import FrameType
 from typing import TYPE_CHECKING, Optional
 
+from autogpt.app.custom_thinking import CustomThinkingProcess
+
 from colorama import Fore, Style
 from forge.agent_protocol.database import AgentDB
 from forge.components.code_executor.code_executor import (
@@ -29,7 +31,7 @@ from forge.models.action import ActionInterruptedByHuman, ActionProposal
 from forge.models.utils import ModelWithSummary
 from forge.utils.const import FINISH_COMMAND
 from forge.utils.exceptions import AgentTerminated, InvalidAgentResponseError
-
+from autogpt.app.materials_project_api import process_material_query, is_material_science_query
 from autogpt.agent_factory.configurators import configure_agent_with_state, create_agent
 from autogpt.agents.agent_manager import AgentManager
 from autogpt.agents.prompt_strategies.one_shot import AssistantThoughts
@@ -297,6 +299,7 @@ async def run_auto_gpt(
             llm_provider=llm_provider,
         )
 
+
         file_manager = agent.file_manager
 
         if file_manager and not agent.config.allow_fs_access:
@@ -331,11 +334,14 @@ async def run_auto_gpt(
         except Exception as e:
             logger.error(f"Could not load component configuration: {e}")
 
+    # Initialize CustomThinkingProcess
+    custom_thinker = CustomThinkingProcess()
+
     #################
     # Run the Agent #
     #################
     try:
-        await run_interaction_loop(agent)
+        await run_interaction_loop(agent, custom_thinker)
     except AgentTerminated:
         agent_id = agent.state.agent_id
         logger.info(f"Saving state of {agent_id}...")
@@ -440,6 +446,7 @@ class UserFeedback(str, enum.Enum):
 
 async def run_interaction_loop(
     agent: "Agent",
+    custom_thinker: CustomThinkingProcess
 ) -> None:
     """Run the main interaction loop for the agent.
 
@@ -577,7 +584,16 @@ async def run_interaction_loop(
                 logger.warning("Exiting...")
                 exit()
             else:  # user_feedback == UserFeedback.TEXT
-                pass
+                #Added Block for Materials Project
+                if is_material_science_query(feedback):
+                    api_key = app_config.materials_project_api_key
+                    if api_key:
+                        response = process_material_query(feedback, api_key)
+                        logger.info(response, extra={"title":"MATERIALS PROJECT:", "title_color":Fore.BLUE})
+                        continue
+                    else:
+                        logger.warning("Materials Project API key is not set. Please configure it to use this feature.")
+
         else:
             feedback = ""
             # First log new-line so user can differentiate sections better in console
